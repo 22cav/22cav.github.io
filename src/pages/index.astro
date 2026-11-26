@@ -1,0 +1,119 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import PostRow from '../components/PostRow.astro';
+import portrait from '../assets/portrait.jpeg';
+import { person, news } from '../data/site';
+import { posts } from '../lib/content';
+import { inlineLinks } from '../lib/inline';
+
+const latest = (await posts()).slice(0, 3);
+---
+
+<Base>
+  <section class="intro">
+    <header class="intro__head">
+      <Image
+        src={portrait}
+        alt="Matteo Caviglia"
+        width={480}
+        widths={[240, 360, 480]}
+        sizes="7.5rem"
+        class="intro__photo"
+        loading="eager"
+      />
+      <div>
+        <h1>{person.name}</h1>
+        <p class="lede">Machine learning for sequence models.</p>
+      </div>
+    </header>
+    <div class="intro__text">
+      <p>
+        I'm most interested in sequence modeling: LLMs, attention and, above all,
+        state space models (SSMs). I also care a lot about audio ML. I like
+        simple ideas, and I like to test them carefully before trusting them.
+      </p>
+      <p>
+        I'm doing an MSc in Data Science at EPFL. Right now I'm an ML
+        engineering intern at Logitech, where I work on a neural audio codec.
+        I've also worked on decoding EEG signals.
+      </p>
+      <p class="ask">
+        I'm casually looking for an <strong>internship</strong> and a{' '}
+        <strong>Master's thesis</strong> project. If you work on sequence models
+        or audio, email me at{' '}
+        <a href={`mailto:${person.email}`}>{person.email}</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="news">
+    <h2 id="news">News</h2>
+    {
+      news.map((n) => (
+        <div class="row row--tight">
+          <p class="row__when">{n.when}</p>
+          <p set:html={inlineLinks(n.text)} />
+        </div>
+      ))
+    }
+  </section>
+
+  {
+    latest.length > 0 && (
+      <section class="section" aria-labelledby="blog">
+        <h2 id="blog">Latest posts</h2>
+        {latest.map((p) => <PostRow post={p} />)}
+        <p><a href="/blog/">All posts</a></p>
+      </section>
+    )
+  }
+</Base>
+
+<style>
+  .intro {
+    margin-top: 2.5rem;
+  }
+
+  /* Portrait beside the name, inside the text column. */
+  .intro__head {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  /* The portrait file is already a square head-and-shoulders crop. */
+  .intro__photo {
+    flex: none;
+    width: 7.5rem;
+    height: 7.5rem;
+    border-radius: 50%;
+  }
+
+  .intro h1 {
+    margin-bottom: 0.4rem;
+  }
+
+  .intro .lede {
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .ask {
+    margin: 1.5rem 0 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 3px solid var(--accent);
+  }
+
+  @media (max-width: 30rem) {
+    .intro__head {
+      gap: 1rem;
+    }
+
+    .intro__photo {
+      width: 5.5rem;
+      height: 5.5rem;
+    }
+  }
+</style>

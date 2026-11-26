@@ -1,0 +1,164 @@
+---
+import '../styles/global.css';
+import { person } from '../data/site';
+import Waveform from '../components/Waveform.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title,
+  description = 'Matteo Caviglia: MSc student at EPFL interested in machine learning research on sequence models (LLMs, attention, SSMs) and audio. Looking for an internship and a Master’s thesis.',
+} = Astro.props;
+
+const fullTitle = title ? `${title} | ${person.name}` : person.name;
+const here = Astro.url.pathname;
+const nav = [
+  { href: '/', label: 'About' },
+  { href: '/projects/', label: 'Projects' },
+  { href: '/blog/', label: 'Blog' },
+];
+const isCurrent = (href: string) => (href === '/' ? here === '/' : here.startsWith(href));
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="application/rss+xml" title={`${person.name}: blog`} href="/blog/rss.xml" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL("/og.png", Astro.site)} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="generator" content={Astro.generator} />
+  </head>
+
+  <body>
+    <a class="skip visually-hidden" href="#main">Skip to content</a>
+    <div class="wrap">
+      <header class="top">
+        <a class="top__name" href="/">{person.name}</a>
+        <nav class="top__nav" aria-label="Main">
+          {
+            nav.map((item) => (
+              <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+                {item.label}
+              </a>
+            ))
+          }
+        </nav>
+      </header>
+
+      <main id="main">
+        <slot />
+      </main>
+
+      <footer class="foot">
+        <Waveform />
+        <p>
+          <a href={`mailto:${person.email}`}>Email</a>
+          <a href={person.github}>GitHub</a>
+          <a href={person.linkedin}>LinkedIn</a>
+          <a href={person.huggingface}>Hugging Face</a>
+          <a href="/blog/rss.xml">RSS</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
+
+<style>
+  .skip:focus {
+    position: fixed;
+    top: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    height: auto;
+    clip-path: none;
+    padding: 0.4rem 0.75rem;
+    background: var(--paper);
+    z-index: 10;
+  }
+
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 2rem;
+    padding: 1.75rem 0 1.25rem;
+    margin-bottom: 3rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .top__name {
+    color: var(--ink);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .top__nav {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .top__nav a {
+    color: var(--muted);
+    text-decoration: none;
+    padding-bottom: 0.2rem;
+    border-bottom: 2px solid transparent;
+  }
+
+  .top__nav a:hover {
+    color: var(--ink);
+  }
+
+  .top__nav a[aria-current='page'] {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+  }
+
+  /* Keep the footer at the bottom on short pages. */
+  .wrap {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  main {
+    flex: 1;
+  }
+
+  .foot {
+    margin-top: 6rem;
+    padding: 0 0 2.5rem;
+    font-size: var(--step--1);
+  }
+
+  .foot p {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin: 1rem 0 0;
+  }
+
+  .foot a {
+    color: var(--muted);
+  }
+
+  .foot a:hover {
+    color: var(--accent);
+  }
+</style>

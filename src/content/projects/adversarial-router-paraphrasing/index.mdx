@@ -1,0 +1,87 @@
+---
+title: 'Adversarial paraphrasing against LLM routers'
+summary: 'A small model that rewrites questions, keeping their meaning, so that an LLM router sends them to the expensive model.'
+result: '63% average attack success on the 3 routers it was trained against, at 0.91 semantic similarity. Below 1.1% on unseen routers.'
+context: 'Course project, Modern Natural Language Processing, EPFL'
+date: 2026-06-10
+order: 3
+code: 'https://github.com/22cav/adversarial-paraphrasing'
+---
+
+## The problem
+
+LLM routers decide which model answers each question: easy questions go to a
+small, cheap model, hard ones to a large, expensive one. They are used in
+products like OpenRouter and OpenAI's GPT-5 auto-router.
+
+An attacker could reword questions so they keep the same meaning but look hard
+to the router. Each question then goes to the expensive model, and the service
+pays more for nothing. This is a cost-escalation attack.
+
+Known attacks add special tokens to the end of the question. This works, but
+it breaks the grammar and is easy to spot. We wanted attacks that read like
+normal questions.
+
+## What I did
+
+We fine-tuned a small paraphraser (T5, 0.22B parameters) with reinforcement
+learning. Existing libraries don't support GRPO for encoder–decoder models, so
+we wrote our own GRPO training loop. The attack is black-box: the paraphraser
+only sees the router's scores.
+
+The reward combines three terms:
+
+- **Routing:** the router sends the paraphrase to the expensive model.
+- **Meaning:** the paraphrase still asks the same thing, measured with sentence
+  similarity and a contradiction check in both directions.
+- **Length:** a penalty for paraphrases that get much longer or shorter.
+
+We trained against three routers (Chayan, RouteLLM-BERT and RouteLLM-Causal),
+cycling between them, and tested on three more it never saw (R2,
+RouteLLM-MF and RouteLLM-SW). We compared two settings: a conservative attacker
+with strict meaning constraints and an aggressive one with looser constraints.
+
+## Results
+
+<BarTable
+  caption="Share of questions moved from the cheap to the expensive model, on the test set. The attack works on the routers it was trained against and barely touches the ones it never saw."
+  series={['Conservative (similarity 0.94)', 'Aggressive (similarity 0.91)']}
+  domain={[0, 100]}
+  ticks={[0, 25, 50, 75, 100]}
+  unit="%"
+  rows={[
+    { label: 'Chayan', values: [53.7, 100], section: 'Trained against' },
+    { label: 'RouteLLM-BERT', values: [6.1, 73.6], section: 'Trained against' },
+    { label: 'RouteLLM-Causal', values: [0.1, 15.7], section: 'Trained against' },
+    { label: 'R2', values: [2.2, 2.7], section: 'Never seen' },
+    { label: 'RouteLLM-MF', values: [0, 0.4], section: 'Never seen' },
+    { label: 'RouteLLM-SW', values: [0, 0], section: 'Never seen' },
+  ]}
+/>
+
+- **Aggressive attacker:** 63% average success on the three training routers,
+  and at least 15% on each, at a mean semantic similarity of 0.91.
+- **Conservative attacker:** 20% average success at a similarity of 0.94. It
+  still attacks 2 of the 3 routers.
+- **New questions:** on instruction-following prompts it never saw, the attacks
+  keep working on the training routers (aggressive: 89% on Chayan, 67% on
+  BERT, 42% on Causal).
+- **New routers:** they mostly fail. Average success on unseen routers stays
+  below 1.1%.
+
+### What the paraphrases look like
+
+<div class="example">
+  <p class="example__q"><span>Original, sent to the cheap model</span>A farmer had 105 green tomatoes and 71 red tomatoes in his garden. If he picked 137 tomatoes How many tomatoes are left?</p>
+  <p><span>Conservative, sent to the expensive model (similarity 0.98)</span>The farmer has 105 green tomatoes and 71 red tomatoes in his garden, and he has picked 137 tomatoes. What is the remaining number of tomatoes?</p>
+  <p><span>Aggressive, sent to the expensive model (similarity 0.92)</span>Which of the 105 green tomatoes and 71 red tomatoes picked by the farmer's garden's 137 tomatoes remaining in this table is the following? The Answer:</p>
+</div>
+
+The conservative rewrite is a clean paraphrase. The aggressive one wins by
+falling back on a fixed "Which of … The Answer:" template: it fools the router,
+but it is no longer a good question. Its similarity score stays high anyway,
+which shows why we needed the contradiction check and the length penalty on
+top of embedding similarity.
+
+Ablations confirmed it: without the meaning term the paraphraser drops meaning
+entirely (similarity 0.27) while fooling Chayan and BERT 98–99% of the time.

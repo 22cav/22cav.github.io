@@ -1,0 +1,135 @@
+---
+title: "Manipulating singular values in Muon's update"
+summary: "We changed the singular values of the Muon optimizer's update to see if a different spectrum trains better. At a tuned learning rate, none beat Muon's flat one."
+result: 'No spectrum beat tuned Muon on a 124M-parameter GPT. Per-layer routing helps when the learning rate is too high. Exact SVD is 1.5× slower for no gain.'
+context: 'Course project, Optimization for Machine Learning, EPFL'
+date: 2026-06-18
+order: 4
+code: 'https://github.com/22cav/cs-439-project'
+---
+
+## The problem
+
+Muon is an optimizer for the weight matrices of neural networks. At each step
+it takes the momentum, keeps its singular vectors, and sets all its singular
+values to one:
+
+$$
+M = U \Sigma V^\top \quad\longrightarrow\quad \text{update} = U V^\top
+$$
+
+Every direction in the update gets pushed by the same amount. It
+works very well for training transformers.
+
+That flat spectrum is a strong choice. DynMuon, a recent variant, replaces it
+with a power of the singular values, $\sigma^p$, where $p$ changes during
+training. We asked:
+does changing the spectrum improve training, or does it just change the step
+size?
+
+## What I did
+
+We put the methods in one family. They all keep the momentum's singular
+vectors and differ only in the singular values of the update, that is, in the
+function $f$ in
+
+$$
+\text{update} = U f(\Sigma)\, V^\top.
+$$
+
+The methods:
+
+- **Muon** (flat), **exact-SVD Muon**, and **DynMuon** (scheduled power).
+- **DynMuon-Route**, our variant, which lets each layer move its power up or
+  down based on a per-layer signal (stable rank, signal-to-noise ratio or
+  weight–update alignment).
+- **RelMuon**, which takes the update's scales from the weight matrix's own
+  spectrum.
+- **Controls** that keep the update size fixed but change its shape: random
+  values, a chaotic polynomial map (Kaon), and the inverted spectrum, which puts
+  the largest step on the weakest direction.
+
+The controls matter because changing the spectrum also changes the size of the
+update, which is the same as changing the learning rate. Matching the size lets
+us measure the effect of shape alone.
+
+Each run trains a 124M-parameter GPT on 400M FineWeb tokens. We swept the
+learning rate for every method and compared them at their best.
+
+## Results
+
+**At a tuned learning rate, nothing beats Muon.** Muon and DynMuon reach the
+same loss within seed noise (3.646 vs 3.651). DynMuon's learning-rate curve is
+mostly Muon's curve shifted: its schedule acts like a bigger learning rate.
+Exact SVD matches Muon's Newton–Schulz approximation but is 1.5× slower per
+step, and RelMuon is both worse and almost 4× slower.
+
+<BarTable
+  title="Final validation loss (lower is better)"
+  caption="Final validation loss of each optimizer at its best learning rate. Muon, exact-SVD Muon, routed DynMuon and DynMuon are within 0.007 of each other."
+  mark="dot"
+  domain={[3.62, 3.82]}
+  ticks={[3.65, 3.7, 3.75, 3.8]}
+  decimals={3}
+  highlight={['Muon']}
+  rows={[
+    { label: 'Exact-SVD Muon', values: [3.6438] },
+    { label: 'Muon', values: [3.6456], note: 'mean of 3 seeds' },
+    { label: 'Routed DynMuon', values: [3.6476] },
+    { label: 'DynMuon', values: [3.6508], note: 'mean of 3 seeds' },
+    { label: 'RelMuon', values: [3.6883] },
+    { label: 'AdamW', values: [3.7917] },
+  ]}
+/>
+
+<BarTable
+  title="Seconds per training step (lower is better)"
+  caption="Cost of each optimizer, same order as above. Muon is the cheapest of the matrix optimizers; only AdamW is faster, and it ends 0.15 higher in loss."
+  domain={[0, 12]}
+  ticks={[0, 4, 8, 12]}
+  decimals={2}
+  unit=" s"
+  highlight={['Muon']}
+  rows={[
+    { label: 'Exact-SVD Muon', values: [4.2] },
+    { label: 'Muon', values: [2.79] },
+    { label: 'Routed DynMuon', values: [3.62] },
+    { label: 'DynMuon', values: [3.38] },
+    { label: 'RelMuon', values: [10.81] },
+    { label: 'AdamW', values: [2.29] },
+  ]}
+/>
+
+**Order matters, exact values don't.** With the update size held fixed,
+random singular values barely change the result. Putting the same values in
+reverse order, so the weakest direction gets the biggest step, fails.
+
+<BarTable
+  title="Extra loss compared with Muon, update size matched"
+  caption="Random values cost almost nothing. Inverting the order costs 0.32. Seed noise is about ±0.001."
+  domain={[0, 0.35]}
+  ticks={[0, 0.1, 0.2, 0.3]}
+  decimals={3}
+  signed
+  highlight={['Inverted spectrum']}
+  rows={[
+    { label: 'Random spectrum', values: [0.004] },
+    { label: 'Flat, exact SVD', values: [0.009] },
+    { label: 'Kaon map', values: [0.048] },
+    { label: 'Inverted spectrum', values: [0.321] },
+  ]}
+/>
+
+**Flatter is better, up to Muon.** A fixed-power variant that pushes the
+spectrum toward flat improves steadily as it gets flatter, and its best setting
+comes closest to Muon. Muon simply takes flattening to its limit.
+
+**Per-layer routing protects against a bad learning rate.** At a tuned rate no
+routing signal opens a better optimum; only weight–update alignment stays
+within noise of the baseline. But when the learning rate is 2.5–10× too high,
+routing recovers 0.017–0.022 of validation loss. It works as a per-layer safety
+net for the step size, not as a faster optimizer.
+
+So what matters in Muon's update is its size and keeping larger steps on
+stronger directions, not a special spectrum. Plain Muon stays the strongest
+cheap default in this family.

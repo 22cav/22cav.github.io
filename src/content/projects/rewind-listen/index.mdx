@@ -1,0 +1,90 @@
+---
+title: 'Rewind-Listen: feeding speech to an LLM while you talk'
+summary: 'An on-device LLM reads a spoken question while it is still being spoken, so it can answer almost as soon as you stop.'
+result: 'First answer token 4.0× sooner (128 ms vs 513 ms), a 38% shorter end-of-turn wait, and no significant change in accuracy.'
+context: 'Personal research project'
+date: 2026-10-23
+order: 1
+code: 'https://github.com/22cav/rewind-listen'
+---
+
+import overview from './overview.png';
+
+## The problem
+
+A voice assistant built from a speech recognizer and an LLM usually works in
+two steps. First it waits for you to finish talking and transcribes everything.
+Then the LLM reads the whole transcript and starts to answer. The LLM sits idle
+the whole time you are speaking.
+
+## What I did
+
+Rewind-Listen lets the LLM read the question while it is being spoken. At each
+pause, or after 4 seconds of speech without one, a speech recognizer
+transcribes the recent audio. The new text goes straight into the LLM's
+key-value cache.
+
+<Figure
+  src={overview}
+  alt="Diagram in three steps. 1: recent speech is re-transcribed at pauses. 2: the LLM's KV cache is rewound past the token that changed, the shared prefix is reused, and only the new tokens get a forward pass. 3: the LLM's probability that the sentence has ended sets how much silence ends the turn."
+  caption="How it works. (1) At each pause the recognizer re-transcribes the recent audio. (2) The KV cache is rewound to the prefix the old and new transcripts share, and only the new tokens are read. (3) The LLM's own estimate that the sentence is finished sets how long a silence ends the turn."
+/>
+
+Recognizers often change their last few words when they hear more. When that
+happens, the cache is rewound to the longest prefix the old and new transcripts
+share, and only the changed part is read again. Because attention is causal, the
+result is the same as reading the full transcript from scratch.
+
+To decide when the question is finished, the system looks at two things: how
+long the silence is, and how likely the LLM thinks the sentence is to end at
+that point. The recognizer's final period or question mark is removed, so the
+LLM has to predict it. The probability it gives to a sentence-ending next token
+(`.`, `?`, `!` or its end-of-turn token) is $q_{\text{end}}$, and it comes free
+with the forward pass that updates the cache. The turn ends after a silence of
+
+$$
+\tau_{\text{wait}} = 1.2\,\text{s} - 0.9\,\text{s} \times q_{\text{end}}
+$$
+
+So a sentence that looks complete ends after 0.3 s of silence, and one that
+looks unfinished waits up to 1.2 s.
+
+Nothing is trained, and the LLM is not modified. It uses an off-the-shelf
+Parakeet recognizer (110M parameters) and any mlx-lm chat model, and it runs on
+an Apple Silicon Mac with MLX.
+
+## Results
+
+Measured on an 8 GB MacBook Air M2 with Qwen3-1.7B (4-bit), on spoken
+questions from VoiceBench:
+
+- **Speed.** The first answer token comes 128 ms after the turn ends (median),
+  against 513 ms when the recognizer and the LLM run one after the other: 4.0×
+  sooner. LocalAgreement-2, a common streaming method that holds each word back
+  until two recognizer runs agree on it, is about as fast but needs 2.2× the
+  compute (5.6 s against 2.5 s per question).
+- **Rewinds are cheap.** The median step rewinds no tokens at all. Over a whole
+  question, the LLM reads 1.6× the length of the final transcript, against 6.8×
+  if every step re-read it from scratch.
+- **The result is exact.** In float32, the logits match reading the final
+  transcript from scratch up to rounding, and 128-token answers are identical
+  on all 40 test questions.
+- **Ending the turn.** $q_{\text{end}}$ tells finished from unfinished sentences
+  with an area under the ROC curve of 0.886, against 0.820 for the
+  recognizer's own punctuation. With the rule above, the turn ends after a
+  median wait of 600 ms. A fixed silence timer needs 960 ms to cut people off
+  as rarely, so the wait is 38% shorter.
+- **Accuracy.** No comparison shows a significant difference from the two-step
+  pipeline: every 95% confidence interval includes zero.
+
+| Task | Model | Two-step | Rewind-Listen | Difference [95% CI] |
+| --- | --- | --- | --- | --- |
+| Multiple choice (1,064) | Qwen3-1.7B | 39.2% | 39.9% | +0.8 [−2.3, +3.8] |
+| Big-Bench Hard (1,000) | Qwen3-1.7B | 54.6% | 54.0% | −0.6 [−4.1, +2.9] |
+| Instruction following (345) | Qwen3-1.7B | 50.1% | 52.8% | +2.6 [−1.4, +6.7] |
+| Multiple choice (300) | Qwen3-4B | 50.3% | 52.3% | +2.0 [−3.3, +7.7] |
+| Multiple choice (300) | Llama-3.2-3B | 33.7% | 36.3% | +2.7 [−3.0, +8.3] |
+
+The main limits: $q_{\text{end}}$ only reads words, so it cannot hear that a
+speaker who pauses after a complete clause is going to go on. Only English was
+tested, and most runs use synthetic speech, which is cleaner than live speech.

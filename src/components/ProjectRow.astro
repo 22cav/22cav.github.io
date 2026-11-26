@@ -1,0 +1,38 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+
+const { project } = Astro.props;
+const { title, summary, result, context, date, code } = project.data;
+---
+
+<article class="row">
+  <p class="row__when">{date.getFullYear()}</p>
+  <div>
+    <h3 class="row__title"><a href={`/projects/${project.id}/`}>{title}</a></h3>
+    <p class="row__where small">{context}</p>
+    <p class="summary">{summary}</p>
+    {result && <p class="result">{result}</p>}
+    {code && <p class="small links"><a href={code}>Code on GitHub</a></p>}
+  </div>
+</article>
+
+<style>
+  .summary {
+    margin: 0.35rem 0 0;
+  }
+
+  .result {
+    margin: 0.35rem 0 0;
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--trace);
+    font-size: var(--step--1);
+  }
+
+  .links {
+    margin: 0.4rem 0 0;
+  }
+</style>

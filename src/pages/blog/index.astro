@@ -1,0 +1,31 @@
+---
+import Base from '../../layouts/Base.astro';
+import PostRow from '../../components/PostRow.astro';
+import { posts } from '../../lib/content';
+
+const all = await posts();
+---
+
+<Base title="Blog" description="Notes by Matteo Caviglia on machine learning, signals and research.">
+  <header class="head">
+    <h1>Blog</h1>
+    <p class="lede">
+      This page contains completely random and seemingly unconnected notes on
+      topics I find interesting, mostly machine learning.
+    </p>
+    <p class="lede">
+      Some posts will describe things I learn, some will be condensed results of
+      my work, and some will provide a more personal perspective. I will try to
+      keep them simple and direct.
+    </p>
+    <p class="small"><a href="/blog/rss.xml">Subscribe with RSS</a></p>
+  </header>
+
+  {
+    all.length > 0 ? (
+      all.map((p) => <PostRow post={p} />)
+    ) : (
+      <p class="muted">No posts yet. The first one is coming soon.</p>
+    )
+  }
+</Base>

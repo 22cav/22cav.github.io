@@ -1,0 +1,76 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import Article from '../../layouts/Article.astro';
+import { projects, mdxComponents } from '../../lib/content';
+
+export const getStaticPaths = (async () => {
+  return (await projects()).map((project) => ({
+    params: { slug: project.id },
+    props: { project },
+  }));
+}) satisfies GetStaticPaths;
+
+const { project } = Astro.props;
+const { Content } = await render(project);
+const { title, summary, result, context, date, code } = project.data;
+---
+
+<Article
+  title={title}
+  description={summary}
+  when={String(date.getFullYear())}
+  back={{ href: '/projects/', label: 'All projects' }}
+>
+  <dl class="facts" slot="meta">
+    <div>
+      <dt>Context</dt>
+      <dd>{context}</dd>
+    </div>
+    {
+      result && (
+        <div>
+          <dt>Result</dt>
+          <dd>{result}</dd>
+        </div>
+      )
+    }
+    {
+      code && (
+        <div>
+          <dt>Code</dt>
+          <dd>
+            <a href={code}>{code.replace('https://', '')}</a>
+          </dd>
+        </div>
+      )
+    }
+  </dl>
+
+  <Content components={mdxComponents} />
+</Article>
+
+<style>
+  .facts {
+    margin: 1.25rem 0 0;
+    padding: 0.9rem 0 0;
+    border-top: 1px solid var(--rule);
+    font-size: var(--step--1);
+    display: grid;
+    gap: 0.3rem;
+  }
+
+  .facts div {
+    display: grid;
+    grid-template-columns: 5rem 1fr;
+    gap: 1rem;
+  }
+
+  .facts dt {
+    color: var(--muted);
+  }
+
+  .facts dd {
+    margin: 0;
+  }
+</style>

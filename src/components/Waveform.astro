@@ -1,0 +1,64 @@
+---
+// The footer sign-off: a short phrase of speech that trails off into a flat
+// line across the text column, like a recording ending. On wide screens the
+// phrase hangs in the date rail, like the dates do.
+// Each page gets its own phrase, seeded from its URL.
+import { speechEnvelope, hash } from '../lib/waveform';
+
+const STEP = 4; // px between bars
+const W = 176; // viewBox units; drawn at the width of the rail (--hang)
+const H = 24;
+const mid = H / 2;
+const bars = speechEnvelope(W / STEP, hash(Astro.url.pathname));
+
+let d = '';
+bars.forEach((v, i) => {
+  const x = i * STEP + STEP / 2;
+  const h = v * (H / 2 - 1);
+  if (h > 0.6) d += `M${x} ${(mid - h).toFixed(2)}V${(mid + h).toFixed(2)}`;
+});
+---
+
+<div class="signoff" aria-hidden="true">
+  <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMaxYMid slice" focusable="false">
+    <line x1="0" x2={W} y1={mid} y2={mid} class="signoff__base" shape-rendering="crispEdges" />
+    <path d={d} class="signoff__bars" />
+  </svg>
+  <span class="signoff__line"></span>
+</div>
+
+<style>
+  .signoff {
+    display: flex;
+    align-items: center;
+  }
+
+  svg {
+    flex: none;
+    width: var(--hang);
+    height: 24px;
+  }
+
+  .signoff__bars {
+    stroke: var(--muted);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .signoff__base {
+    stroke: var(--rule);
+    stroke-width: 1;
+  }
+
+  .signoff__line {
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  @media (min-width: 64rem) {
+    .signoff {
+      margin-left: calc(-1 * var(--hang));
+    }
+  }
+</style>

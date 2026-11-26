@@ -1,0 +1,382 @@
+@import '@fontsource-variable/atkinson-hyperlegible-next/wght.css';
+@import '@fontsource-variable/atkinson-hyperlegible-next/wght-italic.css';
+@import '@fontsource-variable/atkinson-hyperlegible-mono/wght.css';
+
+/* ── Tokens ─────────────────────────────────────────────────────────────── */
+
+:root {
+  --paper: #fcfcfb;
+  --ink: #152036;
+  --muted: #5b6478;
+  --rule: #dce0e7;
+  --accent: #2a4fc4;
+  --trace: #2a4fc4;
+  --code-bg: #f1f3f7;
+
+  --font: 'Atkinson Hyperlegible Next Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'Atkinson Hyperlegible Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Type scale, ratio ~1.25 from a 17px body. */
+  --step--1: 0.85rem;
+  --step-0: 1.0625rem;
+  --step-1: 1.3rem;
+  --step-2: 1.6rem;
+  --step-3: clamp(1.9rem, 1.4rem + 2vw, 2.6rem);
+  --leading: 1.6;
+
+  /* Layout: one centred text column. On wide screens a date rail hangs into
+     the left margin, so the text itself stays centred. */
+  --rail: 8.5rem;
+  --gap: 2.5rem;
+  --hang: calc(var(--rail) + var(--gap));
+  --measure: 40rem;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0f1522;
+    --ink: #e4e8f0;
+    --muted: #9aa3b5;
+    --rule: #2a3348;
+    --accent: #93acff;
+    --trace: #7f9cff;
+    --code-bg: #19202f;
+  }
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font);
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: var(--step-0);
+  line-height: var(--leading);
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  font-weight: 700;
+  text-wrap: balance;
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--step-3);
+  letter-spacing: -0.015em;
+}
+
+h2 {
+  font-size: var(--step-1);
+}
+
+h3 {
+  font-size: var(--step-0);
+}
+
+p {
+  margin: 0 0 1em;
+  text-wrap: pretty;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+:not(pre) > code {
+  background: var(--code-bg);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+pre {
+  background: var(--code-bg) !important;
+  padding: 1rem 1.25rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  .astro-code,
+  .astro-code span {
+    color: var(--shiki-dark) !important;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── Page frame ─────────────────────────────────────────────────────────── */
+
+/* The wrap *is* the text column: header, text and footer share one left edge. */
+.wrap {
+  max-width: calc(var(--measure) + 2rem);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: var(--step--1);
+}
+
+/* A dated row. Narrow screens: the date sits above its content. Wide screens:
+   the date hangs in the rail to the left of the column (see the media query). */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 0.1rem;
+  margin-bottom: 1.75rem;
+}
+
+.row__when {
+  color: var(--muted);
+  font-size: var(--step--1);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tight rows: one line of text after the date (news). */
+.row--tight {
+  margin-bottom: 0.9rem;
+}
+
+.row--tight p {
+  margin: 0;
+}
+
+/* Page header: title and a standfirst. */
+.head {
+  margin-bottom: 3rem;
+}
+
+.head h1 {
+  margin-bottom: 0.75rem;
+}
+
+.lede {
+  font-size: var(--step-1);
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.row__title {
+  font-size: var(--step-0);
+  font-weight: 700;
+  margin: 0;
+}
+
+.row__title a {
+  color: inherit;
+  text-decoration-color: var(--rule);
+}
+
+.row__title a:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
+.row__where {
+  color: var(--muted);
+  margin: 0;
+}
+
+.row p:last-child {
+  margin-bottom: 0;
+}
+
+.section {
+  margin-top: 4.5rem;
+}
+
+.section > h2 {
+  margin-bottom: 1.5rem;
+}
+
+/* The page header already leaves room before the first section. */
+.head + .section {
+  margin-top: 0;
+}
+
+figcaption {
+  margin-top: 0.75rem;
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+/* ── Wide screens: the rail hangs left of the column ────────────────────── */
+
+/* 64rem = measure + a rail's width on both sides, so the column stays centred. */
+@media (min-width: 64rem) {
+  .row {
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    column-gap: var(--gap);
+    margin-left: calc(-1 * var(--hang));
+  }
+
+  .row__when {
+    text-align: right;
+    padding-top: 0.2em;
+  }
+}
+
+@media (max-width: 46rem) {
+  .section {
+    margin-top: 3.25rem;
+  }
+
+  /* On phones, a Markdown table keeps each cell on one line ("Qwen3-1.7B",
+     not "Qwen3-/1.7B") and scrolls sideways inside its own box instead of
+     making the page scroll. `> table` leaves the BarTable charts alone:
+     they sit inside a <figure> and have their own layout. */
+  .prose > table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .prose > table th,
+  .prose > table td {
+    white-space: nowrap;
+  }
+}
+
+/* ── Long-form text (projects, posts) ───────────────────────────────────── */
+
+.prose h2 {
+  margin: 2.5rem 0 0.75rem;
+}
+
+.prose h3 {
+  margin: 2rem 0 0.5rem;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.25rem;
+  margin: 0 0 1em;
+}
+
+.prose li + li {
+  margin-top: 0.35rem;
+}
+
+.prose blockquote {
+  margin: 1.5rem 0;
+  padding-left: 1rem;
+  border-left: 3px solid var(--rule);
+  color: var(--muted);
+}
+
+.prose img {
+  display: block;
+  margin: 1.5rem 0;
+}
+
+.prose table {
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: var(--step--1);
+}
+
+/* Math (KaTeX). Display equations scroll sideways on phones instead of
+   overflowing the column. */
+.katex {
+  font-size: 1.1em;
+}
+
+.katex-display {
+  margin: 1.25rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+.prose th,
+.prose td {
+  text-align: left;
+  padding: 0.4rem 0.9rem 0.4rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ── Worked example (e.g. a question and its rewrites) ──────────────────── */
+
+.example {
+  margin: 1.5rem 0 2rem;
+  border-left: 3px solid var(--rule);
+  padding-left: 1rem;
+}
+
+.example p {
+  margin: 0 0 1rem;
+}
+
+.example p:last-child {
+  margin-bottom: 0;
+}
+
+.example span {
+  display: block;
+  font-size: var(--step--1);
+  color: var(--muted);
+  margin-bottom: 0.15rem;
+}
+
+.example__q {
+  font-style: italic;
+}
+
+.example__q span {
+  font-style: normal;
+}

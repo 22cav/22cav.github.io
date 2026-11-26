@@ -1,0 +1,341 @@
+---
+// A horizontal bar (or dot) chart drawn as an HTML table: readable without
+// JavaScript, accessible as a real table, and styled with the site's tokens.
+//
+//   <BarTable
+//     caption="What to notice."
+//     series={['Conservative', 'Aggressive']}       // omit for one series
+//     rows={[{ label: 'Chayan', values: [53.7, 100], section: 'Trained against' }]}
+//     domain={[0, 100]} unit="%" decimals={1}
+//     mark="bar"                                    // or "dot" for a non-zero baseline
+//     ticks={[0, 50, 100]}
+//     highlight={['Inverted']}                     // optional: rows drawn in the accent
+//   />
+
+interface Row {
+  label: string;
+  values: number[];
+  section?: string;
+  note?: string;
+}
+
+interface Props {
+  caption: string;
+  rows: Row[];
+  series?: string[];
+  domain: [number, number];
+  unit?: string;
+  decimals?: number;
+  signed?: boolean;
+  mark?: 'bar' | 'dot';
+  ticks?: number[];
+  /** Short title above the plot. */
+  title?: string;
+  highlight?: string[];
+}
+
+const {
+  caption,
+  rows,
+  series = [],
+  domain,
+  unit = '',
+  decimals = 1,
+  signed = false,
+  mark = 'bar',
+  ticks = [],
+  title,
+  highlight = [],
+} = Astro.props;
+
+const [lo, hi] = domain;
+const pct = (v: number) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
+const fmt = (v: number) => `${signed && v > 0 ? '+' : ''}${v.toFixed(decimals)}${unit}`;
+const multi = series.length > 1;
+
+// Insert a section header whenever the section changes.
+const items: ({ kind: 'section'; text: string } | ({ kind: 'row' } & Row))[] = [];
+let current: string | undefined;
+for (const r of rows) {
+  if (r.section && r.section !== current) {
+    items.push({ kind: 'section', text: r.section });
+    current = r.section;
+  }
+  items.push({ kind: 'row', ...r });
+}
+---
+
+<figure class="chart">
+  {title && <p class="chart__title">{title}</p>}
+  {
+    multi && (
+      <ul class="chart__legend" aria-hidden="true">
+        {series.map((s, i) => (
+          <li>
+            <span class={`sw s${i + 1}`} />
+            {s}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  <table class:list={['chart__table', `chart--${mark}`]}>
+    <caption class="visually-hidden">{caption}</caption>
+    <thead class="visually-hidden">
+      <tr>
+        <th scope="col">Item</th>
+        {multi ? series.map((s) => <th scope="col">{s}</th>) : <th scope="col">Value</th>}
+      </tr>
+    </thead>
+    <tbody>
+      {
+        items.map((it) =>
+          it.kind === 'section' ? (
+            <tr class="chart__section">
+              <th scope="colgroup" colspan="2">{it.text}</th>
+            </tr>
+          ) : (
+            <tr class:list={['chart__row', { 'is-hi': highlight.includes(it.label) }]}>
+              <th scope="row" class="chart__label">
+                {it.label}
+                {it.note && <span class="chart__note">{it.note}</span>}
+              </th>
+              <td class="chart__cell">
+                {it.values.map((v, i) => (
+                  <div class="chart__line" title={`${it.label}${multi ? `, ${series[i]}` : ''}: ${fmt(v)}`}>
+                    <span class="chart__track">
+                      {mark === 'bar' ? (
+                        <span class={`chart__bar s${i + 1}`} style={`width:${pct(v)}%`} />
+                      ) : (
+                        <span class={`chart__dot s${i + 1}`} style={`left:${pct(v)}%`} />
+                      )}
+                    </span>
+                    <span class="chart__value">
+                      {multi && <span class="visually-hidden">{series[i]}: </span>}
+                      {fmt(v)}
+                    </span>
+                  </div>
+                ))}
+              </td>
+            </tr>
+          ),
+        )
+      }
+    </tbody>
+    {
+      ticks.length > 0 && (
+        <tfoot aria-hidden="true">
+          <tr>
+            <td />
+            <td class="chart__axis">
+              <span class="chart__track">
+                {ticks.map((t) => (
+                  <span class="chart__tick" style={`left:${pct(t)}%`}>
+                    {String(Number(t.toFixed(decimals)))}
+                    {unit}
+                  </span>
+                ))}
+              </span>
+            </td>
+          </tr>
+        </tfoot>
+      )
+    }
+  </table>
+  <figcaption>{caption}</figcaption>
+</figure>
+
+<style>
+  .chart {
+    margin: 2rem 0;
+    --s1: #2a4fc4;
+    --s2: #c77c02;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .chart {
+      --s1: #6d8af0;
+      --s2: #b87e14;
+    }
+  }
+
+  .chart__title {
+    font-weight: 700;
+    font-size: var(--step--1);
+    margin: 0 0 0.5rem;
+  }
+
+  .chart__legend {
+    display: flex;
+    gap: 1.25rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.75rem;
+    font-size: var(--step--1);
+    color: var(--muted);
+  }
+
+  .chart__legend li {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .sw {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 2px;
+    background: var(--s1);
+  }
+
+  .sw.s2 {
+    background: var(--s2);
+  }
+
+  .chart__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--step--1);
+    margin: 0;
+  }
+
+  .chart__table th,
+  .chart__table td {
+    border: 0;
+    padding: 0;
+  }
+
+  .chart__table .chart__label {
+    width: 9.5rem;
+    padding: 0.35rem 0.9rem 0.35rem 0;
+    text-align: right;
+    font-weight: 400;
+    color: var(--ink);
+    vertical-align: middle;
+    line-height: 1.25;
+  }
+
+  .chart__note {
+    display: block;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  .chart__table .chart__cell {
+    padding: 0.45rem 0;
+    vertical-align: middle;
+  }
+
+  .chart__line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 1.05rem;
+    line-height: 1;
+  }
+
+  .chart__line + .chart__line {
+    margin-top: 2px;
+  }
+
+  .chart__track {
+    position: relative;
+    flex: 1;
+    height: 100%;
+  }
+
+  /* Baseline the bars grow from. */
+  .chart--bar .chart__track {
+    border-left: 1px solid var(--muted);
+  }
+
+  .chart__bar {
+    position: absolute;
+    left: 0;
+    top: 1px;
+    bottom: 1px;
+    min-width: 1px;
+    background: var(--s1);
+    border-radius: 0 4px 4px 0;
+  }
+
+  .chart__bar.s2,
+  .chart__dot.s2 {
+    background: var(--s2);
+  }
+
+  .chart--dot .chart__track::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px dotted var(--rule);
+  }
+
+  .chart__dot {
+    position: absolute;
+    top: 50%;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
+    background: var(--s1);
+    box-shadow: 0 0 0 2px var(--paper);
+    transform: translate(-50%, -50%);
+  }
+
+  .chart__value {
+    width: 3.6rem;
+    flex: none;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .is-hi .chart__value,
+  .is-hi .chart__label {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .chart__table .chart__section th {
+    text-align: left;
+    padding: 0.9rem 0 0.25rem;
+    font-weight: 700;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+
+  .chart__table .chart__section:first-child th {
+    padding-top: 0;
+  }
+
+  .chart__table .chart__axis {
+    padding-top: 0.3rem;
+  }
+
+  .chart__axis .chart__track {
+    display: block;
+    height: 1.1rem;
+    margin-right: 4.1rem;
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .chart__tick {
+    position: absolute;
+    top: 0.15rem;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 46rem) {
+    .chart__table .chart__label {
+      width: 6.5rem;
+      padding-right: 0.6rem;
+    }
+  }
+</style>

@@ -1,0 +1,56 @@
+---
+title: 'SlurmTerm: a terminal interface for Slurm'
+summary: 'A keyboard-driven terminal app to monitor, submit and manage jobs on Slurm clusters. One static Rust binary.'
+result: 'Published on PyPI and crates.io, about 1,000 downloads.'
+context: 'Personal project'
+date: 2026-07-01
+order: 5
+code: 'https://github.com/22cav/slurm-term'
+---
+
+import monitor from './monitor.png';
+import composer from './composer.png';
+
+## The problem
+
+Most research clusters use the Slurm scheduler. Checking on your jobs usually
+means typing `squeue` again and again and reading through a wall of text.
+
+## What I did
+
+SlurmTerm is a full terminal interface for Slurm. It has:
+
+- a live job queue you can search, with bulk cancel and hold;
+- a job composer with a form, a live preview of the script, and help for every
+  parameter;
+- a view of the cluster's nodes and hardware;
+- your job history.
+
+<Figure
+  src={monitor}
+  alt="SlurmTerm's Jobs tab: a table of running jobs with ID, name, partition, state, time and node count, and a row of key shortcuts at the bottom."
+  caption="The job queue. Search, select, inspect, sort and cancel, all from the keyboard."
+/>
+
+<Figure
+  src={composer}
+  alt="SlurmTerm's Submit tab: a form with partition, time limit, nodes, memory, GPUs and job name on the left, and the generated sbatch script on the right."
+  caption="The job composer. The form on the left writes the sbatch script on the right as you type."
+/>
+
+It works with the keyboard, and with the mouse if you want. When you start an
+interactive job, it steps aside and drops you into the session, then comes back
+when you leave.
+
+The first version was in Python. It was too slow to start, so I rewrote it in
+Rust. Now it starts instantly and ships as a single binary with no
+dependencies. You can copy it to any login node, which matters on clusters
+where you can't install software.
+
+## Install
+
+```sh
+cargo install slurm-term
+# or
+pip install slurm-term
+```

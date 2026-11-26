@@ -1,0 +1,61 @@
+---
+// The page for one project or one blog post: a header in the rail grid,
+// then the text.
+import Base from './Base.astro';
+// Math in posts and project pages is rendered by KaTeX at build time; this is its stylesheet.
+import 'katex/dist/katex.min.css';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Shown in the rail, next to the title. */
+  when: string;
+  datetime?: string;
+  back: { href: string; label: string };
+}
+
+const { title, description, when, datetime, back } = Astro.props;
+---
+
+<Base title={title} description={description}>
+  <article>
+    <header class="row head">
+      <p class="row__when">
+        {datetime ? <time datetime={datetime}>{when}</time> : when}
+      </p>
+      <div>
+        <h1>{title}</h1>
+        <p class="lede">{description}</p>
+        <slot name="meta" />
+      </div>
+    </header>
+
+    <div class="prose">
+      <slot />
+    </div>
+
+    <p class="back"><a href={back.href}>{back.label}</a></p>
+  </article>
+</Base>
+
+<style>
+  /* Line the date up with the first line of the big title. */
+  .head .row__when {
+    padding-top: 0.9em;
+  }
+
+  .lede {
+    margin-bottom: 0.75rem;
+  }
+
+  .back {
+    margin-top: 3.5rem;
+  }
+
+  @media (max-width: 63.99rem) {
+    .head .row__when {
+      padding-top: 0;
+      margin-bottom: 0.25rem;
+    }
+  }
+</style>

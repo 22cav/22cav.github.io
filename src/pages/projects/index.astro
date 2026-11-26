@@ -1,0 +1,21 @@
+---
+import Base from '../../layouts/Base.astro';
+import ProjectRow from '../../components/ProjectRow.astro';
+import { projects } from '../../lib/content';
+
+const all = await projects();
+---
+
+<Base
+  title="Projects"
+  description="Research and engineering projects by Matteo Caviglia: LLMs, optimization, speech, EEG decoding and tools."
+>
+  <header class="head">
+    <h1>Projects</h1>
+    <p class="lede">
+      Research projects, course projects and tools I've built. Newest first.
+    </p>
+  </header>
+
+  {all.map((p) => <ProjectRow project={p} />)}
+</Base>

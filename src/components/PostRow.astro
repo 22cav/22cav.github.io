@@ -1,0 +1,20 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { formatDate } from '../lib/content';
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+}
+
+const { post } = Astro.props;
+const { title, description, date } = post.data;
+const { when, datetime } = formatDate(date);
+---
+
+<article class="row">
+  <p class="row__when"><time datetime={datetime}>{when}</time></p>
+  <div>
+    <h3 class="row__title"><a href={`/blog/${post.id}/`}>{title}</a></h3>
+    <p class="row__where">{description}</p>
+  </div>
+</article>
